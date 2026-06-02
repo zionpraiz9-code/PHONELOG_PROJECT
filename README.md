@@ -8,18 +8,19 @@ A premium, self-contained Flask application for managing contacts with flat-file
 
 ## 🚀 Quick Start
 
-### Prerequisites
-- Python 3.8 or newer
-- pip package manager
+### Live Deployment
+This application is deployed and running on PythonAnywhere:
+🌐 **https://OLALERUPRAISE.PYTHONANYWHERE.COM**
 
-### Setup
+### Local Setup
 ```powershell
 cd C:/Users/User pc/Desktop/HTML-CSS-COURSE/PHONE_LOG_PROJECT
 pip install -r requirements.txt
 python app.py
 ```
 
-Open your browser at: **http://127.0.0.1:5000**
+Open your browser at: **http://127.0.0.1:5000** (local)
+Or access the live version at: **https://OLALERUPRAISE.PYTHONANYWHERE.COM**
 
 ---
 
@@ -218,3 +219,62 @@ python app.py
 - Admin can manage the full dataset and export/import CSV
 - Regular users only manage their own records
 - Theme preferences persist locally in the browser
+
+---
+
+## 🌐 Deployment
+
+### Live Production Environment
+This application is deployed on **PythonAnywhere** and is publicly accessible at:
+
+```
+🌐 https://OLALERUPRAISE.PYTHONANYWHERE.COM
+```
+
+**Access Credentials (Same as Local)**:
+- Username: `admin` / Password: `adminpassword`
+- Username: `praise` / Password: `praisepass`
+- Username: `zion` / Password: `zionpass`
+
+### PythonAnywhere Configuration
+- **Domain**: OLALERUPRAISE.PYTHONANYWHERE.COM
+- **Framework**: Flask 2.3+
+- **Python Version**: 3.8+
+- **WSGI**: Configured for production deployment
+- **SSL/TLS**: Enabled (HTTPS)
+
+### Key Features on Production
+✅ Full user authentication  
+✅ Real-time contact management  
+✅ Duplicate protection  
+✅ Search and filtering capabilities  
+✅ Admin export/import functionality  
+✅ Dark/Light theme toggle  
+✅ Responsive design (mobile-friendly)  
+✅ Session security with HTTPOnly cookies  
+
+---
+
+## 📝 Course Defense Presentation
+
+This Contact/Address Book application has been built as a production-ready system suitable for course presentations and demonstrations. It showcases:
+
+- **Backend**: Flask with flat-file data persistence
+- **Frontend**: Responsive HTML/CSS with Bootstrap 5
+- **Database**: Self-contained CSV-based storage (users.txt, contacts.txt)
+- **Security**: Password hashing, session management, role-based access control
+- **UX/UI**: Elite dark/light theme toggle, premium design with electric blue accents
+- **Features**: CRUD operations, search, filtering, bulk import/export, owner management
+
+### Presentation Ready ✅
+- No external databases required
+- Auto-seeded demo data with 15+ sample contacts
+- Three pre-configured user accounts
+- Fully functional on first launch
+- Production deployment live on PythonAnywhere
+
+---
+
+**Version**: 1.0 (Production-Ready)  
+**Last Updated**: June 2, 2026  
+**Deployment**: OLALERUPRAISE.PYTHONANYWHERE.COM

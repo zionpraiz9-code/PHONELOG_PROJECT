@@ -1,710 +1,384 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Address Book Dashboard</title>
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
-      integrity="sha384-VuO2amGktrwz7VhE2gQXc+qBTSJpqXRD3wgj+NQJj89Kql5pF3U8Xc0MRm5+v8T8"
-      crossorigin="anonymous"
-    />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" integrity="sha384-VuO2amGktrwz7VhE2gQXc+qBTSJpqXRD3wgj+NQJj89Kql5pF3U8Xc0MRm5+v8T8" crossorigin="anonymous" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" />
     <style>
       :root {
-        color-scheme: dark;
-        font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         --bg: #000000;
-        --panel: rgba(255, 255, 255, 0.06);
-        --panel-soft: rgba(255, 255, 255, 0.08);
+        --surface: rgba(255,255,255,0.06);
+        --surface-soft: rgba(255,255,255,0.08);
         --text: #ffffff;
-        --muted: #8ba5ba;
-        --border: rgba(0, 229, 255, 0.25);
+        --muted: #8da3bc;
+        --border: rgba(0,229,255,0.22);
         --accent: #00e5ff;
-        --accent-dark: #00b0d5;
-        --button-bg: rgba(0, 229, 255, 0.12);
+        --accent-strong: #6cf2ff;
       }
-
       html.light-mode {
-        color-scheme: light;
-        --bg: #f8f9fa;
-        --panel: #ffffff;
-        --panel-soft: #f1f5f9;
+        --bg: #f8fafc;
+        --surface: #ffffff;
+        --surface-soft: #f1f5f9;
         --text: #0f172a;
         --muted: #475569;
-        --border: rgba(14, 165, 233, 0.24);
+        --border: rgba(14,165,233,0.24);
         --accent: #0ea5e9;
-        --accent-dark: #0b79b4;
-        --button-bg: rgba(14, 165, 233, 0.10);
+        --accent-strong: #38bdf8;
       }
-
-      *, *::before, *::after {
-        box-sizing: border-box;
-        transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
-      }
-
-      body {
-        margin: 0;
-        min-height: 100vh;
-        background: var(--bg);
-        color: var(--text);
-      }
-
-      .page-wrap {
-        min-height: 100vh;
-        background: var(--bg);
-      }
-
-      .container-fluid {
-        max-width: 1600px;
-        padding-left: 3rem;
-        padding-right: 3rem;
-      }
-
-      .top-bar {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: space-between;
-        align-items: flex-start;
-        gap: 1rem;
-        padding: 32px 0 20px;
-      }
-
-      .brand-copy h1 {
-        margin: 0;
-        font-size: clamp(2.1rem, 3vw, 3rem);
-        letter-spacing: -0.05em;
-      }
-
-      .brand-copy p {
-        margin: 14px 0 0;
-        color: var(--muted);
-        max-width: 760px;
-        line-height: 1.7;
-      }
-
-      .action-group {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 12px;
-      }
-
-      .action-button,
-      .pill-button {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.6rem;
-        border-radius: 999px;
-        border: 1px solid var(--border);
-        background: var(--panel);
-        color: var(--text);
-        padding: 14px 22px;
-        font-weight: 700;
-        cursor: pointer;
-        text-decoration: none;
-      }
-
-      .action-button:hover,
-      .pill-button:hover,
-      .metric-card:hover {
-        background: var(--panel-soft);
-      }
-
-      .hero-pill {
-        position: relative;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 999px;
-        border: 1px solid var(--accent);
-        background: rgba(0, 229, 255, 0.12);
-        color: var(--accent);
-        padding: 10px 18px;
-        font-weight: 700;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-      }
-
-      .dashboard-grid {
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: 24px;
-      }
-
-      .panel {
-        background: var(--panel);
-        border: 1px solid var(--border);
-        border-radius: 28px;
-        padding: 28px;
-        box-shadow: 0 40px 110px rgba(0, 0, 0, 0.18);
-      }
-
-      .panel h2 {
-        margin: 0 0 10px;
-        font-size: 1.05rem;
-      }
-
-      .panel p {
-        margin: 0;
-        color: var(--muted);
-        line-height: 1.7;
-      }
-
-      .metric-stack {
-        display: grid;
-        gap: 16px;
-      }
-
-      .metric-card {
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        min-height: 136px;
-        padding: 22px;
-        border-radius: 24px;
-        background: rgba(255, 255, 255, 0.04);
-        border: 1px solid rgba(0, 229, 255, 0.18);
-        cursor: default;
-      }
-
-      .metric-card--action {
-        cursor: pointer;
-      }
-
-      .metric-card strong {
-        display: block;
-        margin-top: 12px;
-        font-size: 2.4rem;
-        line-height: 1;
-      }
-
-      .metric-card small {
-        color: var(--muted);
-        text-transform: uppercase;
-        letter-spacing: 0.14em;
-        font-size: 0.78rem;
-      }
-
-      .form-section {
-        display: grid;
-        gap: 18px;
-      }
-
-      .field-label {
-        display: block;
-        margin-bottom: 0.75rem;
-        font-weight: 700;
-      }
-
-      .form-control,
-      .form-select {
-        width: 100%;
-        border-radius: 999px;
-        border: 1px solid var(--border);
-        background: rgba(255, 255, 255, 0.08);
-        color: var(--text);
-        padding: 16px 20px;
-        min-height: 56px;
-      }
-
-      .form-control::placeholder {
-        color: rgba(255, 255, 255, 0.55);
-      }
-
-      .form-control:focus,
-      .form-select:focus {
-        outline: none;
-        border-color: var(--accent);
-        box-shadow: 0 0 0 0.2rem rgba(0, 229, 255, 0.16);
-      }
-
-      .submit-action {
-        border-radius: 999px;
-        border: none;
-        padding: 16px 24px;
-        background: linear-gradient(135deg, #00e5ff 0%, #4fd8ff 100%);
-        color: #030712;
-        font-weight: 800;
-      }
-
-      .controls-row {
-        display: grid;
-        grid-template-columns: 1fr auto;
-        gap: 16px;
-        margin-bottom: 22px;
-      }
-
-      .controls-top {
-        display: grid;
-        gap: 16px;
-      }
-
-      .table-controls {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 14px;
-        align-items: center;
-        margin-bottom: 22px;
-      }
-
-      .filter-pills {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-      }
-
-      .filter-pill {
-        border-radius: 999px;
-        border: 1px solid var(--border);
-        background: var(--panel);
-        color: var(--text);
-        padding: 10px 18px;
-        text-decoration: none;
-        font-weight: 700;
-      }
-
-      .filter-pill.active {
-        border-color: var(--accent);
-        background: rgba(0, 229, 255, 0.12);
-        color: var(--accent);
-      }
-
-      .table-wrap {
-        overflow-x: auto;
-      }
-
-      table {
-        width: 100%;
-        min-width: 940px;
-        border-collapse: collapse;
-      }
-
-      thead th {
-        text-align: left;
-        padding: 16px 18px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-        text-transform: uppercase;
-        font-size: 0.78rem;
-        letter-spacing: 0.14em;
-        color: var(--muted);
-      }
-
-      tbody tr {
-        transition: background-color 0.2s ease;
-      }
-
-      tbody tr:hover {
-        background: rgba(255, 255, 255, 0.06);
-      }
-
-      td {
-        padding: 18px 18px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-        vertical-align: middle;
-      }
-
-      .contact-name {
-        font-weight: 700;
-      }
-
-      .contact-email {
-        color: var(--muted);
-      }
-
-      .tag {
-        display: inline-flex;
-        align-items: center;
-        border-radius: 999px;
-        font-weight: 700;
-        padding: 8px 14px;
-        font-size: 0.82rem;
-      }
-
-      .tag-family { background: rgba(84, 255, 170, 0.16); color: #c8ffe1; }
-      .tag-work { background: rgba(103, 149, 255, 0.16); color: #d9e9ff; }
-      .tag-friends { background: rgba(255, 161, 66, 0.16); color: #ffe3b8; }
-      .tag-others { background: rgba(188, 122, 255, 0.16); color: #f0dcff; }
-
-      .row-actions {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: flex-end;
-        gap: 10px;
-      }
-
-      .row-button {
-        border-radius: 999px;
-        border: 1px solid var(--border);
-        background: transparent;
-        color: var(--text);
-        padding: 10px 16px;
-        min-width: 96px;
-        font-weight: 700;
-        cursor: pointer;
-      }
-
-      .row-button.delete {
-        border-color: rgba(255, 104, 104, 0.26);
-        color: #ffb3b3;
-      }
-
-      .row-button:hover {
-        background: rgba(255, 255, 255, 0.05);
-      }
-
-      .status-banner {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        border-radius: 999px;
-        padding: 10px 16px;
-        background: rgba(0, 229, 255, 0.12);
-        color: var(--accent);
-        border: 1px solid rgba(0, 229, 255, 0.24);
-        margin-top: 6px;
-      }
-
-      .modal-content {
-        border-radius: 24px;
-        background: var(--panel);
-        border: 1px solid var(--border);
-      }
-
-      .modal-header,
-      .modal-footer {
-        border: none;
-      }
-
-      .user-list button {
-        width: 100%;
-        text-align: left;
-        border-radius: 16px;
-        padding: 14px 18px;
-        border: 1px solid var(--border);
-        background: transparent;
-        color: var(--text);
-        margin-bottom: 10px;
-      }
-
-      .user-list button:hover {
-        background: rgba(0, 229, 255, 0.08);
-      }
-
-      @media (min-width: 992px) {
-        .dashboard-grid {
-          grid-template-columns: 320px 1fr;
-        }
-      }
-
-      @media (max-width: 991px) {
-        .container-fluid {
-          padding-left: 1.5rem;
-          padding-right: 1.5rem;
-        }
-
-        .controls-row {
-          grid-template-columns: 1fr;
-        }
-      }
-
-      @media (max-width: 767px) {
-        .top-bar {
-          flex-direction: column;
-          align-items: stretch;
-        }
-
-        .action-group {
-          justify-content: flex-start;
-        }
-
-        .table-controls {
-          flex-direction: column;
-          align-items: stretch;
-        }
-
-        .row-actions {
-          justify-content: flex-start;
-        }
-      }
+      * { box-sizing: border-box; transition: background-color .25s ease, color .25s ease, border-color .25s ease; }
+      body { margin: 0; min-height: 100vh; font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); }
+      .page-wrapper { min-height: 100vh; padding: 32px 24px; }
+      .page-shell { max-width: 1600px; margin: 0 auto; }
+      .top-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 18px; align-items: flex-start; margin-bottom: 26px; }
+      .top-copy h1 { margin: 0; font-size: clamp(2rem, 3vw, 3rem); line-height: 1.03; letter-spacing: -0.05em; font-weight: 800; }
+      .top-copy p { margin: 12px 0 0; color: var(--muted); max-width: 840px; line-height: 1.75; }
+      .hero-chip { display: inline-flex; align-items: center; justify-content: center; padding: 10px 18px; border-radius: 999px; border: 1px solid var(--accent); background: rgba(0,229,255,0.12); color: var(--accent); font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; font-size: 0.81rem; }
+      .controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+      .button, .pill-button { display: inline-flex; align-items: center; gap: 0.6rem; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--text); padding: 14px 20px; font-weight: 700; text-decoration: none; cursor: pointer; transition: all 0.2s ease; }
+      .button:hover { background: var(--surface-soft); }
+      .button.primary { background: linear-gradient(135deg, #00e5ff 0%, #4fd8ff 100%); color: #030712; border-color: transparent; }
+      .button.primary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0, 229, 255, 0.3); }
+      .dashboard-grid { display: grid; gap: 24px; grid-template-columns: 1fr; }
+      .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 28px; padding: 30px; box-shadow: 0 40px 90px rgba(0,0,0,0.15); }
+      .panel-title { margin: 0 0 12px; font-size: 1rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+      .panel-heading { margin: 0 0 12px; font-size: 1.45rem; line-height: 1.2; font-weight: 700; }
+      .panel-copy { margin: 10px 0 0; color: var(--muted); line-height: 1.7; }
+      .stats-grid { display: grid; gap: 18px; }
+      .stat-card { border-radius: 26px; padding: 22px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); cursor: pointer; transition: all 0.2s ease; }
+      .stat-card:hover { background: rgba(0,229,255,0.08); border-color: var(--accent); transform: translateY(-2px); }
+      .stat-card strong { display: block; font-size: 2.4rem; line-height: 1; font-weight: 800; }
+      .stat-label { display: block; margin-top: 8px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.14em; font-size: 0.78rem; }
+      .form-field { margin-bottom: 16px; }
+      .field-label { display: block; margin-bottom: 0.8rem; font-weight: 700; }
+      .form-control, .form-select { width: 100%; min-height: 56px; border-radius: 999px; border: 1px solid var(--border); background: rgba(255,255,255,0.08); color: var(--text); padding: 16px 20px; font-size: 1rem; }
+      .form-control::placeholder { color: var(--muted); }
+      .form-control:focus, .form-select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 0.2rem rgba(0,229,255,0.14); background: rgba(255,255,255,0.08); color: var(--text); }
+      .form-select option { background: #1e293b; color: #ffffff; }
+      .grid-2 { display: grid; gap: 16px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .table-wrap { overflow-x: auto; }
+      table { width: 100%; border-collapse: collapse; min-width: 900px; }
+      thead th { text-align: left; padding: 16px 18px; border-bottom: 1px solid rgba(255,255,255,0.12); color: var(--muted); font-size: 0.78rem; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700; }
+      tbody tr:hover { background: rgba(255,255,255,0.05); }
+      td { padding: 18px 18px; border-bottom: 1px solid rgba(255,255,255,0.08); vertical-align: middle; }
+      .contact-name { font-weight: 700; }
+      .contact-email { color: var(--muted); font-size: 0.95rem; }
+      .tag { display: inline-flex; align-items: center; border-radius: 999px; padding: 8px 14px; font-size: 0.82rem; font-weight: 700; }
+      .tag-family { background: rgba(84,255,170,0.14); color: #b9ffda; }
+      .tag-work { background: rgba(103,149,255,0.14); color: #d9e9ff; }
+      .tag-friends { background: rgba(255,161,66,0.14); color: #ffe3b8; }
+      .tag-others { background: rgba(188,122,255,0.14); color: #f0dcff; }
+      .row-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; }
+      .table-button { border-radius: 999px; border: 1px solid var(--border); background: transparent; color: var(--text); padding: 10px 16px; font-weight: 700; cursor: pointer; transition: all 0.2s ease; font-size: 0.9rem; }
+      .table-button.delete { border-color: rgba(255,104,104,0.30); color: #ffb3b3; }
+      .table-button:hover { background: rgba(255,255,255,0.06); }
+      .alert-banner { display: inline-flex; align-items: center; gap: 0.6rem; padding: 12px 16px; border-radius: 999px; background: rgba(0,229,255,0.10); border: 1px solid rgba(0,229,255,0.18); color: var(--accent); font-weight: 700; }
+      .modal-content { border-radius: 24px; background: var(--surface); border: 1px solid var(--border); }
+      .modal-header { border-bottom: 1px solid rgba(0,229,255,0.12); }
+      .modal-footer { border-top: 1px solid rgba(0,229,255,0.12); }
+      .modal-body button { width: 100%; border-radius: 18px; border: 1px solid var(--border); background: transparent; color: var(--text); padding: 14px 18px; text-align: left; margin-bottom: 12px; font-weight: 700; transition: all 0.2s ease; }
+      .modal-body button:hover { background: rgba(0,229,255,0.08); border-color: var(--accent); }
+      .btn-close { filter: brightness(0.8); }
+      .theme-button { position: relative; width: auto; height: auto; border-radius: 999px; padding: 0; }
+      .import-section { margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.12); }
+      .file-input-wrapper { position: relative; overflow: hidden; display: inline-block; width: 100%; }
+      .file-input-wrapper input[type=file] { position: absolute; left: -9999px; }
+      .file-input-label { display: block; text-align: center; padding: 14px 18px; border: 2px dashed var(--accent); border-radius: 999px; background: rgba(0,229,255,0.06); color: var(--accent); font-weight: 700; cursor: pointer; transition: all 0.2s ease; }
+      .file-input-label:hover { background: rgba(0,229,255,0.12); }
+      @media (min-width: 1200px) { .dashboard-grid { grid-template-columns: 380px 1fr; } }
+      @media (max-width: 767px) { .grid-2 { grid-template-columns: 1fr; } .top-row { flex-direction: column; } .controls { justify-content: stretch; } .row-actions { justify-content: flex-start; } table { min-width: 100%; } }
     </style>
   </head>
   <body>
-    <div class="page-wrap">
-      <div class="container-fluid px-5 py-4">
-        <div class="top-bar">
-          <div class="brand-copy">
-            <span class="hero-pill">Elite Address Book</span>
-            <h1>Pitch-Black Contact Studio</h1>
-            <p>Balanced widescreen layout, premium metrics panel, admin registry export, and instant owner filter modal support for your course defense.</p>
+    <div class="page-wrapper">
+      <div class="page-shell">
+        <div class="top-row">
+          <div class="top-copy">
+            <span class="hero-chip">⚡ Pitch Black Operations</span>
+            <h1>Electric Blue Contact Studio</h1>
+            <p>Manage all contacts with advanced search, filtering by owner & category, bulk import/export, and collaborative editing.</p>
           </div>
-
-          <div class="action-group">
+          <div class="controls">
             {% if role == 'admin' %}
-            <a href="{{ url_for('export_registry') }}" class="action-button"><i class="bi bi-download"></i> Export CSV</a>
+            <a href="{{ url_for('export_registry') }}" class="button"><i class="bi bi-file-earmark-arrow-down"></i> Export Registry</a>
             {% endif %}
-            <button id="themeToggle" class="action-button" type="button"><i class="bi bi-brightness-high-fill"></i> Theme</button>
-            <a href="{{ url_for('logout') }}" class="action-button"><i class="bi bi-box-arrow-right"></i> Logout</a>
+            <button id="themeToggle" class="button"><i class="bi bi-brightness-high-fill"></i> Theme</button>
+            <a href="{{ url_for('logout') }}" class="button"><i class="bi bi-box-arrow-right"></i> Logout</a>
           </div>
         </div>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
-        <div class="mb-3">
+        <div class="mb-4">
           {% for category, message in messages %}
-          <div class="alert alert-{{ 'danger' if category == 'danger' else 'warning' if category == 'warning' else 'success' if category == 'success' else 'info' }}" role="alert">
-            {{ message }}
-          </div>
+          <div class="alert alert-{{ 'danger' if category == 'error' else 'success' if category == 'success' else 'warning' if category == 'warning' else 'info' }}" role="alert" style="border-radius: 22px; border: none; background: rgba(0, 229, 255, 0.1); color: var(--accent); padding: 14px 18px;">{{ message }}</div>
           {% endfor %}
         </div>
         {% endif %}
         {% endwith %}
 
-        <div class="dashboard-grid row g-4">
-          <div class="col-xl-3 col-lg-4">
-            <div class="metric-stack panel mb-4">
-              <h2>Analytics</h2>
-              <p>Quick insight and admin actions without losing the widescreen flow.</p>
-              <button type="button" class="metric-card metric-card--action" data-bs-toggle="modal" data-bs-target="#userFilterModal">
-                <small>Registered Users</small>
-                <strong>{{ total_users }}</strong>
-              </button>
-              <div class="metric-card">
-                <small>My Contacts</small>
-                <strong>{{ total_contacts }}</strong>
+        <div class="dashboard-grid">
+          <!-- LEFT COLUMN: Forms & Analytics -->
+          <div>
+            <!-- Overview Panel -->
+            <div class="panel mb-4">
+              <p class="panel-title">Overview</p>
+              <h2 class="panel-heading">Contact Command Center</h2>
+              <p class="panel-copy">Use the form on the left to add/edit records. Click any stat below to explore data.</p>
+              <div class="stats-grid mt-4">
+                <div class="stat-card" data-bs-toggle="modal" data-bs-target="#ownerModal" title="Click to filter by owner">
+                  <strong>{{ total_users }}</strong>
+                  <span class="stat-label">Registered Users</span>
+                </div>
+                <div class="stat-card">
+                  <strong>{{ total_contacts }}</strong>
+                  <span class="stat-label">Total Contacts</span>
+                </div>
+                {% if role == 'admin' %}
+                <div class="stat-card">
+                  <strong>{{ total_global_contacts }}</strong>
+                  <span class="stat-label">Registry Contacts</span>
+                </div>
+                {% endif %}
               </div>
-              {% if role == 'admin' %}
-              <div class="metric-card">
-                <small>Total Registry Rows</small>
-                <strong>{{ total_global_contacts }}</strong>
-              </div>
-              {% endif %}
             </div>
 
-            <div class="panel">
-              <h2>{{ 'Edit Contact' if edit_contact else 'Add New Contact' }}</h2>
-              <p>{{ 'Update the selected row from the table, or complete the form to add a fresh record.' if edit_contact else 'Enter a new contact record with duplicate checks on Name + Phone per owner.' }}</p>
+            <!-- Add/Edit Contact Form -->
+            <div class="panel mb-4">
+              <p class="panel-title">{{ 'Edit Contact' if edit_contact else 'Add New Contact' }}</p>
+              <h2 class="panel-heading">{{ 'Update record' if edit_contact else 'Create a contact' }}</h2>
               <form method="post" action="{{ url_for('edit_contact') if edit_contact else url_for('add_contact') }}" autocomplete="off">
                 {% if edit_contact %}
                 <input type="hidden" name="contact_id" value="{{ edit_contact.id }}" />
                 {% endif %}
-
-                <div class="form-section mt-4">
-                  <div>
-                    <label class="field-label" for="inputName">Name</label>
-                    <input id="inputName" name="name" type="text" class="form-control" placeholder="Full name" value="{{ edit_contact.name if edit_contact else '' }}" required />
-                  </div>
-                  <div>
-                    <label class="field-label" for="inputPhone">Phone</label>
-                    <input id="inputPhone" name="phone" type="tel" class="form-control" placeholder="555-123-4567" value="{{ edit_contact.phone if edit_contact else '' }}" required />
-                  </div>
-                  <div>
-                    <label class="field-label" for="inputEmail">Email</label>
-                    <input id="inputEmail" name="email" type="email" class="form-control" placeholder="name@example.com" value="{{ edit_contact.email if edit_contact else '' }}" />
-                  </div>
-                  <div>
-                    <label class="field-label" for="inputCategory">Category</label>
-                    <select id="inputCategory" name="category" class="form-select">
-                      {% for category in categories %}
-                      <option value="{{ category }}" {% if edit_contact and edit_contact.category == category %}selected{% endif %}>{{ category }}</option>
-                      {% endfor %}
-                    </select>
-                  </div>
-                  {% if role == 'admin' %}
-                  <div>
-                    <label class="field-label" for="inputOwner">Owner</label>
-                    <input id="inputOwner" name="owner" type="text" class="form-control" placeholder="username" value="{{ edit_contact.owner if edit_contact else username }}" />
-                  </div>
+                <div class="form-field">
+                  <label class="field-label" for="name">Name *</label>
+                  <input class="form-control" id="name" name="name" type="text" placeholder="Full name" value="{{ edit_contact.name if edit_contact else '' }}" required />
+                </div>
+                <div class="form-field">
+                  <label class="field-label" for="phone">Phone *</label>
+                  <input class="form-control" id="phone" name="phone" type="tel" placeholder="555-123-4567" value="{{ edit_contact.phone if edit_contact else '' }}" required />
+                </div>
+                <div class="form-field">
+                  <label class="field-label" for="email">Email</label>
+                  <input class="form-control" id="email" name="email" type="email" placeholder="name@example.com" value="{{ edit_contact.email if edit_contact else '' }}" />
+                </div>
+                <div class="form-field">
+                  <label class="field-label" for="category">Category</label>
+                  <select id="category" name="category" class="form-select">
+                    <option value="Work" {% if edit_contact and edit_contact.category == 'Work' %}selected{% endif %}>Work</option>
+                    <option value="Family" {% if edit_contact and edit_contact.category == 'Family' %}selected{% endif %}>Family</option>
+                    <option value="Friends" {% if edit_contact and edit_contact.category == 'Friends' %}selected{% endif %}>Friends</option>
+                    <option value="Others" {% if edit_contact and edit_contact.category == 'Others' %}selected{% endif %}>Others</option>
+                  </select>
+                </div>
+                {% if role == 'admin' %}
+                <div class="form-field">
+                  <label class="field-label" for="owner">Owner</label>
+                  <select id="owner" name="record_owner" class="form-select">
+                    {% for user in users %}
+                    <option value="{{ user }}" {% if edit_contact and edit_contact.owner == user %}selected{% elif not edit_contact and user == username %}selected{% endif %}>{{ user }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                {% endif %}
+                <div class="d-grid gap-3">
+                  <button type="submit" class="button primary">{{ 'Save Changes' if edit_contact else 'Add Contact' }}</button>
+                  {% if edit_contact %}
+                  <a href="{{ url_for('dashboard') }}" class="button">Cancel Edit</a>
                   {% endif %}
-                  <div class="d-grid gap-3 mt-2">
-                    <button type="submit" class="submit-action">{{ 'Save Changes' if edit_contact else 'Add Contact' }}</button>
-                    {% if edit_contact %}
-                    <a href="{{ url_for('dashboard', category=selected_category, sort=sort_key, search=search_query) }}" class="row-button">Cancel Edit</a>
-                    {% endif %}
-                  </div>
                 </div>
               </form>
             </div>
+
+            <!-- Import/Export Panel -->
+            <div class="panel">
+              <p class="panel-title">File Syncing</p>
+              <h2 class="panel-heading">Import & Export</h2>
+              <div style="display: grid; gap: 12px;">
+                <form method="post" action="{{ url_for('export_txt') }}">
+                  <button type="submit" class="button" style="width: 100%;"><i class="bi bi-download"></i> Download as TXT</button>
+                </form>
+              </div>
+              <div class="import-section">
+                <p class="field-label">Upload CSV/TXT</p>
+                <form method="post" action="{{ url_for('import_txt') }}" enctype="multipart/form-data">
+                  <div class="file-input-wrapper">
+                    <label class="file-input-label" for="txt_file">
+                      <i class="bi bi-cloud-upload"></i> Choose file or drag here
+                    </label>
+                    <input type="file" id="txt_file" name="txt_file" accept=".txt,.csv" />
+                  </div>
+                  <button type="submit" class="button" style="width: 100%; margin-top: 12px;"><i class="bi bi-upload"></i> Import Contacts</button>
+                </form>
+              </div>
+            </div>
           </div>
 
-          <div class="col-xl-9 col-lg-8">
-            <div class="panel">
-              <div class="controls-row">
-                <div class="controls-top">
-                  <form class="table-controls" method="get" action="{{ url_for('dashboard') }}">
-                    <input type="hidden" name="owner_filter" id="ownerFilterInput" value="{{ owner_filter }}" />
-                    <input type="hidden" name="category" value="{{ selected_category }}" />
-                    <input type="hidden" name="sort" value="{{ sort_key }}" />
-                    <input
-                      type="search"
-                      name="search"
-                      class="form-control"
-                      placeholder="Search name, phone, or email"
-                      value="{{ search_query }}"
-                    />
-                    <button type="submit" class="action-button">Search</button>
-                  </form>
-                  <div class="filter-pills">
-                    <a href="#" class="filter-pill {% if selected_category == 'all' %}active{% endif %}" data-category="all">All</a>
-                    {% for category in categories %}
-                    <a href="#" class="filter-pill {% if selected_category == category %}active{% endif %}" data-category="{{ category }}">{{ category }}</a>
-                    {% endfor %}
-                  </div>
+          <!-- RIGHT COLUMN: Search & Table -->
+          <div>
+            <!-- Search & Filter Panel -->
+            <div class="panel mb-4">
+              <div class="d-flex flex-column gap-3">
+                <div>
+                  <p class="panel-title">Search and filter</p>
+                  <h2 class="panel-heading">Table Controls</h2>
                 </div>
-                <div class="d-flex flex-column align-items-end gap-2">
-                  <select id="sortSelect" class="form-select w-100" aria-label="Sort contacts">
-                    <option value="name" {% if sort_key == 'name' %}selected{% endif %}>Sort A - Z</option>
-                    <option value="date_newest" {% if sort_key == 'date_newest' %}selected{% endif %}>Newest First</option>
-                    <option value="date_oldest" {% if sort_key == 'date_oldest' %}selected{% endif %}>Oldest First</option>
-                  </select>
-                  {% if owner_filter %}
-                  <div class="status-banner">
-                    <i class="bi bi-person-circle"></i> Filtering by owner: <strong>{{ owner_filter }}</strong>
-                    <button id="clearOwnerFilter" type="button" class="row-button delete" style="margin-left: 10px;">Clear Filter</button>
+                <form id="searchForm" method="get" action="{{ url_for('dashboard') }}">
+                  <div class="row g-3 mb-3">
+                    <div class="col-12 col-md-6">
+                      <input class="form-control" type="search" name="search" placeholder="Search name, phone, or email" value="{{ search_query }}" />
+                    </div>
+                    <div class="col-12 col-md-6">
+                      <select class="form-select" name="category" id="filterCategory">
+                        <option value="all" {% if selected_category == 'all' %}selected{% endif %}>All categories</option>
+                        <option value="Work" {% if selected_category == 'Work' %}selected{% endif %}>Work</option>
+                        <option value="Family" {% if selected_category == 'Family' %}selected{% endif %}>Family</option>
+                        <option value="Friends" {% if selected_category == 'Friends' %}selected{% endif %}>Friends</option>
+                        <option value="Others" {% if selected_category == 'Others' %}selected{% endif %}>Others</option>
+                      </select>
+                    </div>
                   </div>
-                  {% endif %}
-                </div>
+                  <input type="hidden" name="owner_filter" id="ownerFilterField" value="{{ owner_filter }}" />
+                  <div class="d-flex flex-wrap gap-3 align-items-center">
+                    <select class="form-select" style="max-width: 200px;" name="sort" id="sortBy">
+                      <option value="name" {% if sort_key == 'name' %}selected{% endif %}>Sort A–Z</option>
+                      <option value="date_newest" {% if sort_key == 'date_newest' %}selected{% endif %}>Newest first</option>
+                      <option value="date_oldest" {% if sort_key == 'date_oldest' %}selected{% endif %}>Oldest first</option>
+                    </select>
+                    <button type="submit" class="button"><i class="bi bi-funnel"></i> Apply</button>
+                    <button type="button" id="clearFilter" class="button">Clear Filter</button>
+                  </div>
+                </form>
+                {% if owner_filter %}
+                <div class="alert-banner"><i class="bi bi-person-check-fill"></i> Filtered by owner: <strong>{{ owner_filter }}</strong></div>
+                {% endif %}
               </div>
+            </div>
 
-              <div class="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Phone</th>
-                      <th>Email</th>
-                      <th>Category</th>
-                      <th>Date Added</th>
-                      <th>Owner</th>
-                      <th class="text-end">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody id="contactTableBody">
-                    {% if contacts %}
-                    {% for contact in contacts %}
-                    <tr data-owner="{{ contact.owner }}">
-                      <td>
-                        <div class="contact-name">{{ contact.name }}</div>
-                        <div class="contact-email">{{ contact.email or 'No email' }}</div>
-                      </td>
-                      <td>{{ contact.phone }}</td>
-                      <td>{{ contact.email or '—' }}</td>
-                      <td><span class="tag tag-{{ contact.category|lower }}">{{ contact.category }}</span></td>
-                      <td>{{ contact.date_added }}</td>
-                      <td>{{ contact.owner }}</td>
-                      <td class="row-actions">
-                        <a href="{{ url_for('dashboard', edit_id=contact.id, category=selected_category, sort=sort_key, search=search_query) }}" class="row-button">Edit</a>
-                        <form method="post" action="{{ url_for('delete_contact', contact_id=contact.id) }}" onsubmit="return confirm('Delete this contact permanently?');" style="display:inline-flex;">
-                          <button type="submit" class="row-button delete">Delete</button>
-                        </form>
-                      </td>
-                    </tr>
-                    {% endfor %}
-                    {% else %}
-                    <tr>
-                      <td colspan="7" class="text-center" style="padding: 32px; color: var(--muted);">No contacts match the current filters.</td>
-                    </tr>
-                    {% endif %}
-                  </tbody>
-                </table>
-              </div>
+            <!-- Contacts Table Panel -->
+            <div class="panel table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Phone</th>
+                    <th>Email</th>
+                    <th>Category</th>
+                    <th>Added</th>
+                    <th>Owner</th>
+                    <th style="text-align: right;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% if contacts %}
+                  {% for contact in contacts %}
+                  <tr>
+                    <td>
+                      <div class="contact-name">{{ contact.name }}</div>
+                      <div class="contact-email">{{ contact.email or 'No email' }}</div>
+                    </td>
+                    <td><a href="tel:{{ contact.phone }}" style="color: var(--accent); text-decoration: none;">{{ contact.phone }}</a></td>
+                    <td>{{ contact.email or '—' }}</td>
+                    <td><span class="tag tag-{{ contact.category|lower }}">{{ contact.category }}</span></td>
+                    <td style="font-size: 0.9rem;">{{ contact.date_added }}</td>
+                    <td style="font-weight: 700;">{{ contact.owner }}</td>
+                    <td class="row-actions">
+                      <a href="{{ url_for('dashboard', edit_id=contact.id, category=selected_category, sort=sort_key, search=search_query, owner_filter=owner_filter) }}" class="table-button"><i class="bi bi-pencil"></i> Edit</a>
+                      <form method="post" action="{{ url_for('delete_contact', contact_id=contact.id) }}" onsubmit="return confirm('Delete this record permanently?');" style="display:inline-flex;">
+                        <button type="submit" class="table-button delete"><i class="bi bi-trash"></i> Delete</button>
+                      </form>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                  {% else %}
+                  <tr>
+                    <td colspan="7" style="padding: 32px; text-align: center; color: var(--muted);">📭 No contacts found. Adjust the filters or add a record from the left panel.</td>
+                  </tr>
+                  {% endif %}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="modal fade" id="userFilterModal" tabindex="-1" aria-labelledby="userFilterModalLabel" aria-hidden="true">
+    <!-- Owner Filter Modal -->
+    <div class="modal fade" id="ownerModal" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
-          <div class="modal-header border-0">
+          <div class="modal-header">
             <div>
-              <h5 class="modal-title" id="userFilterModalLabel">System Users</h5>
-              <p class="mb-0" style="color: var(--muted);">Click any username to instantly filter the dashboard table by that owner.</p>
+              <h5 class="modal-title">Filter by Owner</h5>
+              <p class="panel-copy">Click any username to instantly filter the table to show only their contacts.</p>
             </div>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
-          <div class="modal-body user-list">
+          <div class="modal-body">
             {% for user in users %}
-            <button type="button" class="btn" onclick="applyOwnerFilter('{{ user }}')">{{ user }}</button>
+            <button type="button" class="button" onclick="setOwnerFilter('{{ user }}')" style="width: 100%; justify-content: flex-start; margin-bottom: 12px;">
+              <i class="bi bi-person-circle"></i> {{ user }}
+            </button>
             {% endfor %}
           </div>
-          <div class="modal-footer border-0">
-            <button type="button" class="action-button" onclick="clearOwnerFilter();" data-bs-dismiss="modal">Clear Filter</button>
+          <div class="modal-footer">
+            <button type="button" class="button" data-bs-dismiss="modal">Close</button>
           </div>
         </div>
       </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-9NDLwZymfKpA+6uH6hiSszt1KnNEqJWpqA7xVkxF6BCE0VWYgcBxALa0FJYdFQms" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-6dq3AT9c4oTqH5FZTrtxHzsNcfVOo93HL9ElA87x0xmqLvy8Q3Q+YCgu/2CkWg2c" crossorigin="anonymous"></script>
     <script>
       const html = document.documentElement;
       const themeToggle = document.getElementById('themeToggle');
+      const clearFilter = document.getElementById('clearFilter');
+      const ownerFilterField = document.getElementById('ownerFilterField');
+      const searchForm = document.getElementById('searchForm');
       const storedTheme = localStorage.getItem('theme') || 'dark';
-      const ownerFilterInput = document.getElementById('ownerFilterInput');
-      const contactRows = Array.from(document.querySelectorAll('#contactTableBody tr[data-owner]'));
-      const filterPills = document.querySelectorAll('.filter-pill');
-      const sortSelect = document.getElementById('sortSelect');
-      const clearOwnerFilterBtn = document.getElementById('clearOwnerFilter');
 
-      function setTheme(mode) {
-        html.classList.toggle('light-mode', mode === 'light');
-        themeToggle.innerHTML = mode === 'light' ? '<i class="bi bi-moon-stars-fill"></i> Dark' : '<i class="bi bi-brightness-high-fill"></i> Light';
-        localStorage.setItem('theme', mode);
+      function applyTheme(theme) {
+        html.classList.toggle('light-mode', theme === 'light');
+        themeToggle.innerHTML = theme === 'light' ? '<i class="bi bi-moon-stars-fill"></i> Theme' : '<i class="bi bi-brightness-high-fill"></i> Theme';
+        localStorage.setItem('theme', theme);
       }
 
-      function filterByOwner(owner) {
-        const normalizedOwner = owner.toLowerCase();
-        contactRows.forEach((row) => {
-          row.style.display = row.dataset.owner.toLowerCase() === normalizedOwner ? '' : 'none';
+      function resetOwnerFilter() {
+        ownerFilterField.value = '';
+        searchForm.submit();
+      }
+
+      function setOwnerFilter(owner) {
+        ownerFilterField.value = owner;
+        searchForm.submit();
+      }
+
+      themeToggle.addEventListener('click', () => applyTheme(html.classList.contains('light-mode') ? 'dark' : 'light'));
+      clearFilter.addEventListener('click', resetOwnerFilter);
+      applyTheme(storedTheme);
+
+      // File drag & drop
+      const fileInput = document.getElementById('txt_file');
+      const fileLabel = document.querySelector('.file-input-label');
+      
+      if (fileLabel) {
+        fileLabel.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          fileLabel.style.background = 'rgba(0, 229, 255, 0.2)';
         });
-        if (ownerFilterInput) {
-          ownerFilterInput.value = owner;
-        }
-      }
-
-      function clearOwnerFilter() {
-        contactRows.forEach((row) => {
-          row.style.display = '';
+        fileLabel.addEventListener('dragleave', () => {
+          fileLabel.style.background = 'rgba(0, 229, 255, 0.06)';
         });
-        if (ownerFilterInput) {
-          ownerFilterInput.value = '';
-        }
-      }
-
-      function applyOwnerFilter(owner) {
-        filterByOwner(owner);
-        const modal = bootstrap.Modal.getInstance(document.getElementById('userFilterModal'));
-        if (modal) {
-          modal.hide();
-        }
-      }
-
-      function syncCategoryInputs() {
-        filterPills.forEach((pill) => {
-          pill.addEventListener('click', (event) => {
-            event.preventDefault();
-            const category = pill.dataset.category;
-            const form = document.querySelector('form.table-controls');
-            if (form) {
-              form.querySelector('input[name="category"]').value = category;
-              form.submit();
-            }
-          });
+        fileLabel.addEventListener('drop', (e) => {
+          e.preventDefault();
+          fileLabel.style.background = 'rgba(0, 229, 255, 0.06)';
+          if (e.dataTransfer.files.length) {
+            fileInput.files = e.dataTransfer.files;
+          }
         });
       }
-
-      themeToggle.addEventListener('click', () => setTheme(html.classList.contains('light-mode') ? 'dark' : 'light'));
-      sortSelect?.addEventListener('change', () => {
-        const url = new URL(window.location.href);
-        url.searchParams.set('sort', sortSelect.value);
-        window.location.href = url.toString();
-      });
-      clearOwnerFilterBtn?.addEventListener('click', clearOwnerFilter);
-      setTheme(storedTheme);
-      syncCategoryInputs();
     </script>
   </body>
 </html>

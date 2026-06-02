@@ -1,460 +1,509 @@
-﻿import csv
+#!/usr/bin/env python3
+"""
+Production-ready Flask app for flat-file address book.
+
+Features:
+- Flat-file storage: users.txt, contacts.txt (CSV-ish)
+- Safe atomic writes and defensive parsing
+- Seeding of initial users and 15+ contacts for owners: admin, praise, zion
+- Routes: login, register, logout, dashboard, add/edit/delete, import/export
+"""
+from __future__ import annotations
+import csv
 import os
-from io import StringIO
+import tempfile
+import shutil
 from datetime import datetime
-from pathlib import Path
+from typing import List, Dict, Any, Optional
 
 from flask import (
     Flask,
-    Response,
-    flash,
-    redirect,
     render_template,
     request,
-    session,
+    redirect,
     url_for,
+    session,
+    flash,
+    send_file,
+    Response,
 )
-from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 
-BASE_DIR = Path(__file__).resolve().parent
-USERS_FILE = BASE_DIR / "users.txt"
-CONTACTS_FILE = BASE_DIR / "contacts.txt"
-CATEGORIES = ["Family", "Work", "Friends", "Others"]
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+USERS_FILE = os.path.join(BASE_DIR, "users.txt")
+CONTACTS_FILE = os.path.join(BASE_DIR, "contacts.txt")
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "change-this-secret-key")
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.secret_key = os.environ.get("FLASK_SECRET_KEY") or "dev-secret-key-change-me"
 
 
-def init_data_files():
-    USERS_FILE.parent.mkdir(parents=True, exist_ok=True)
-    USERS_FILE.touch(exist_ok=True)
-    CONTACTS_FILE.touch(exist_ok=True)
+def safe_read_lines(path: str) -> List[str]:
+    """Safely read file lines, handling missing files gracefully."""
+    try:
+        with open(path, "r", encoding="utf-8", errors="ignore") as fh:
+            return [l.rstrip("\n\r") for l in fh]
+    except FileNotFoundError:
+        return []
 
-    if not load_users():
-        append_user("admin", generate_password_hash("adminpassword"), "admin")
-        append_user("praise", generate_password_hash("praisepassword"), "user")
-        append_user("zion", generate_password_hash("zionpassword"), "user")
 
-    if CONTACTS_FILE.stat().st_size == 0:
-        sample_contacts = [
-            {"id": "1", "name": "Avery Bennett", "phone": "555-0101", "email": "avery.bennett@studio.com", "category": "Work", "date_added": "2024-05-01 08:12:00", "owner": "admin"},
-            {"id": "2", "name": "Mia Carter", "phone": "555-0102", "email": "mia.carter@studio.com", "category": "Friends", "date_added": "2024-05-01 09:05:00", "owner": "admin"},
-            {"id": "3", "name": "Ethan Morris", "phone": "555-0103", "email": "ethan.morris@family.com", "category": "Family", "date_added": "2024-05-01 10:23:00", "owner": "admin"},
-            {"id": "4", "name": "Sophia Hayes", "phone": "555-0104", "email": "sophia.hayes@design.co", "category": "Work", "date_added": "2024-05-01 11:30:00", "owner": "admin"},
-            {"id": "5", "name": "Noah Patel", "phone": "555-0105", "email": "noah.patel@travel.io", "category": "Others", "date_added": "2024-05-01 12:44:00", "owner": "admin"},
-            {"id": "6", "name": "Emma Thompson", "phone": "555-0201", "email": "emma.thompson@friends.io", "category": "Friends", "date_added": "2024-05-02 08:52:00", "owner": "praise"},
-            {"id": "7", "name": "Liam Walker", "phone": "555-0202", "email": "liam.walker@consults.com", "category": "Work", "date_added": "2024-05-02 09:40:00", "owner": "praise"},
-            {"id": "8", "name": "Olivia Brooks", "phone": "555-0203", "email": "olivia.brooks@family.com", "category": "Family", "date_added": "2024-05-02 10:15:00", "owner": "praise"},
-            {"id": "9", "name": "Lucas Reed", "phone": "555-0204", "email": "lucas.reed@studio.com", "category": "Work", "date_added": "2024-05-02 11:28:00", "owner": "praise"},
-            {"id": "10", "name": "Chloe Hayes", "phone": "555-0205", "email": "chloe.hayes@social.io", "category": "Others", "date_added": "2024-05-02 12:49:00", "owner": "praise"},
-            {"id": "11", "name": "Mason Price", "phone": "555-0301", "email": "mason.price@home.net", "category": "Family", "date_added": "2024-05-03 08:15:00", "owner": "zion"},
-            {"id": "12", "name": "Isabella Ross", "phone": "555-0302", "email": "isabella.ross@friends.io", "category": "Friends", "date_added": "2024-05-03 09:22:00", "owner": "zion"},
-            {"id": "13", "name": "Logan Bennett", "phone": "555-0303", "email": "logan.bennett@venture.io", "category": "Work", "date_added": "2024-05-03 10:05:00", "owner": "zion"},
-            {"id": "14", "name": "Ava Morgan", "phone": "555-0304", "email": "ava.morgan@family.com", "category": "Family", "date_added": "2024-05-03 11:50:00", "owner": "zion"},
-            {"id": "15", "name": "Noah King", "phone": "555-0305", "email": "noah.king@creative.io", "category": "Others", "date_added": "2024-05-03 13:12:00", "owner": "zion"},
-            {"id": "16", "name": "Grace Parker", "phone": "555-0401", "email": "grace.parker@operations.com", "category": "Work", "date_added": "2024-05-04 08:42:00", "owner": "admin"},
-            {"id": "17", "name": "Owen Campbell", "phone": "555-0402", "email": "owen.campbell@friends.io", "category": "Friends", "date_added": "2024-05-04 09:35:00", "owner": "admin"},
-            {"id": "18", "name": "Zoe Foster", "phone": "555-0403", "email": "zoe.foster@family.com", "category": "Family", "date_added": "2024-05-04 10:44:00", "owner": "admin"},
-            {"id": "19", "name": "Eli Harrison", "phone": "555-0404", "email": "eli.harrison@studio.com", "category": "Others", "date_added": "2024-05-04 12:10:00", "owner": "admin"},
-            {"id": "20", "name": "Lily Cooper", "phone": "555-0405", "email": "lily.cooper@design.co", "category": "Work", "date_added": "2024-05-04 13:22:00", "owner": "admin"},
+def init_data_files() -> None:
+    """Initialize users.txt and contacts.txt with seed data on first run."""
+    # ensure users file with seeded users
+    users = {"admin": "adminpassword", "praise": "praisepass", "zion": "zionpass"}
+    if not os.path.exists(USERS_FILE):
+        with open(USERS_FILE, "w", encoding="utf-8", newline="") as fh:
+            for u, p in users.items():
+                fh.write(f"{u},{generate_password_hash(p)},user\n")
+        # make admin role explicit
+        lines = safe_read_lines(USERS_FILE)
+        with open(USERS_FILE, "w", encoding="utf-8", newline="") as fh:
+            for line in lines:
+                parts = line.split(",")
+                if parts[0] == "admin":
+                    parts = [parts[0], parts[1], "admin"]
+                fh.write(",".join(parts) + "\n")
+
+    # ensure contacts file seeded with 15+ sample records
+    if not os.path.exists(CONTACTS_FILE) or len(safe_read_lines(CONTACTS_FILE)) < 10:
+        sample = [
+            ("Aiden Park","+1-202-555-0101","aiden.park@example.com","Work","2024-06-01","admin"),
+            ("Maya Johnson","+1-202-555-0112","maya.j@example.com","Family","2024-05-28","praise"),
+            ("Liam Smith","+1-202-555-0133","liam.s@example.com","Friends","2024-05-22","zion"),
+            ("Noah Brown","+1-202-555-0144","noah.b@example.com","Work","2024-06-02","admin"),
+            ("Olivia Davis","+1-202-555-0155","olivia.d@example.com","Friends","2024-05-21","praise"),
+            ("Emma Wilson","+1-202-555-0166","emma.w@example.com","Family","2024-05-18","zion"),
+            ("Lucas Miller","+1-202-555-0177","lucas.m@example.com","Work","2024-05-03","admin"),
+            ("Sophia Martinez","+1-202-555-0188","sophia.m@example.com","Friends","2024-04-30","praise"),
+            ("Mason Anderson","+1-202-555-0199","mason.a@example.com","Work","2024-04-22","zion"),
+            ("Isabella Thomas","+1-202-555-0202","isabella.t@example.com","Family","2024-04-01","admin"),
+            ("James Taylor","+1-202-555-0213","james.t@example.com","Friends","2024-03-15","praise"),
+            ("Amelia Moore","+1-202-555-0224","amelia.m@example.com","Others","2024-02-28","zion"),
+            ("Benjamin Jackson","+1-202-555-0235","ben.j@example.com","Work","2024-02-14","admin"),
+            ("Harper White","+1-202-555-0246","harper.w@example.com","Family","2024-01-08","praise"),
+            ("Evelyn Harris","+1-202-555-0257","evelyn.h@example.com","Friends","2023-12-31","zion"),
         ]
-        save_contacts(sample_contacts)
+        with open(CONTACTS_FILE, "w", encoding="utf-8", newline="") as fh:
+            writer = csv.writer(fh)
+            id_ = 1
+            for name, phone, email, cat, date_added, owner in sample:
+                writer.writerow([id_, name, phone, email, cat, date_added, owner])
+                id_ += 1
 
 
-def load_users():
-    users = []
-    if not USERS_FILE.exists():
-        return users
-
-    with open(USERS_FILE, "r", encoding="utf-8", newline="") as file:
-        reader = csv.reader(file)
-        for row in reader:
-            if not row or len(row) < 3:
-                continue
-            users.append(
-                {
-                    "username": row[0].strip(),
-                    "password": row[1].strip(),
-                    "role": row[2].strip(),
-                }
-            )
+def load_users() -> Dict[str, Dict[str, str]]:
+    """Load all users from users.txt."""
+    users: Dict[str, Dict[str, str]] = {}
+    for line in safe_read_lines(USERS_FILE):
+        if not line.strip():
+            continue
+        parts = [p.strip() for p in line.split(",")]
+        if len(parts) < 2:
+            continue
+        username = parts[0]
+        pw = parts[1]
+        role = parts[2] if len(parts) > 2 else "user"
+        users[username] = {"password": pw, "role": role}
     return users
 
 
-def append_user(username, password_hash, role):
-    with open(USERS_FILE, "a", encoding="utf-8", newline="") as file:
-        writer = csv.writer(file)
-        writer.writerow([username, password_hash, role])
+def append_user(username: str, password_hash: str, role: str = "user") -> None:
+    """Append new user to users.txt."""
+    with open(USERS_FILE, "a", encoding="utf-8", newline="") as fh:
+        fh.write(f"{username},{password_hash},{role}\n")
 
 
-def load_contacts():
-    contacts = []
-    if not CONTACTS_FILE.exists():
-        return contacts
-
-    with open(CONTACTS_FILE, "r", encoding="utf-8", newline="") as file:
-        reader = csv.reader(file)
-        for row in reader:
-            if not row or len(row) < 7:
-                continue
-            row = [value.strip() for value in row]
-            contacts.append(
-                {
-                    "id": row[0],
-                    "name": row[1],
-                    "phone": row[2],
-                    "email": row[3],
-                    "category": row[4] or "Others",
-                    "date_added": row[5],
-                    "owner": row[6],
-                }
-            )
+def load_contacts() -> List[Dict[str, Any]]:
+    """Load all contacts from contacts.txt."""
+    contacts: List[Dict[str, Any]] = []
+    lines = safe_read_lines(CONTACTS_FILE)
+    for line in lines:
+        if not line.strip():
+            continue
+        parts = [p.strip() for p in list(csv.reader([line]))[0]]
+        while len(parts) < 7:
+            parts.append("")
+        try:
+            cid = int(parts[0])
+        except Exception:
+            continue
+        contact = {
+            "id": cid,
+            "name": parts[1],
+            "phone": parts[2],
+            "email": parts[3],
+            "category": parts[4] or "Others",
+            "date_added": parts[5] or datetime.utcnow().strftime("%Y-%m-%d"),
+            "owner": parts[6] or "",
+        }
+        contacts.append(contact)
     return contacts
 
 
-def save_contacts(contacts):
-    with open(CONTACTS_FILE, "w", encoding="utf-8", newline="") as file:
-        writer = csv.writer(file)
-        for contact in contacts:
-            writer.writerow(
-                [
-                    contact["id"],
-                    contact["name"],
-                    contact["phone"],
-                    contact["email"],
-                    contact["category"],
-                    contact["date_added"],
-                    contact["owner"],
-                ]
-            )
+def save_contacts(contacts: List[Dict[str, Any]]) -> None:
+    """Atomically save contacts list to contacts.txt."""
+    fd, tmp = tempfile.mkstemp(dir=BASE_DIR, prefix="contacts-", suffix=".tmp")
+    os.close(fd)
+    try:
+        with open(tmp, "w", encoding="utf-8", newline="") as fh:
+            writer = csv.writer(fh)
+            for c in contacts:
+                writer.writerow([
+                    c.get("id"),
+                    c.get("name", ""),
+                    c.get("phone", ""),
+                    c.get("email", ""),
+                    c.get("category", ""),
+                    c.get("date_added", ""),
+                    c.get("owner", ""),
+                ])
+        os.replace(tmp, CONTACTS_FILE)
+    finally:
+        if os.path.exists(tmp):
+            try:
+                os.remove(tmp)
+            except Exception:
+                pass
 
 
-def normalize_value(value):
-    return value.strip().lower()
+def get_next_contact_id(contacts: List[Dict[str, Any]]) -> int:
+    """Get next available contact ID."""
+    if not contacts:
+        return 1
+    return max(c["id"] for c in contacts) + 1
 
 
-def find_user(username):
-    return next((user for user in load_users() if user["username"] == username), None)
-
-
-def find_contact(contact_id):
-    return next((contact for contact in load_contacts() if contact["id"] == str(contact_id)), None)
-
-
-def filter_owner_contacts(contacts, username, role):
-    if role == "admin":
-        return contacts
-    return [contact for contact in contacts if contact["owner"] == username]
-
-
-def can_manage_contact(contact, username, role):
-    return role == "admin" or contact["owner"] == username
-
-
-def get_next_contact_id(contacts):
-    highest = 0
-    for contact in contacts:
-        try:
-            highest = max(highest, int(contact["id"]))
-        except ValueError:
-            continue
-    return str(highest + 1)
-
-
-def is_duplicate_contact(contacts, name, phone, owner, exclude_id=None):
-    normalized_name = normalize_value(name)
-    normalized_phone = normalize_value(phone)
-    for contact in contacts:
-        if exclude_id and contact["id"] == str(exclude_id):
-            continue
-        if (
-            contact["owner"] == owner
-            and normalize_value(contact["name"]) == normalized_name
-            and normalize_value(contact["phone"]) == normalized_phone
-        ):
-            return True
+def is_duplicate_contact(contacts: List[Dict[str, Any]], name: str, phone: str, owner: str) -> bool:
+    """Check if contact with same name+phone already exists for owner."""
+    n = (name or "").strip().lower()
+    p = (phone or "").strip()
+    for c in contacts:
+        if c.get("owner") == owner and c.get("name", "").strip().lower() == n:
+            if not p or not c.get("phone") or c.get("phone") == p:
+                return True
     return False
 
 
-def require_authentication():
-    username = session.get("username")
-    if not username:
-        flash("Please sign in to continue.", "warning")
-        return redirect(url_for("login"))
-    return None
+def login_required(fn):
+    """Decorator to require login."""
+    from functools import wraps
+    @wraps(fn)
+    def wrapper(*a, **kw):
+        if "username" not in session:
+            return redirect(url_for("login"))
+        return fn(*a, **kw)
+    return wrapper
 
 
 @app.route("/")
-def home():
-    if session.get("username"):
-        return redirect(url_for("dashboard"))
+def index():
+    """Redirect to login."""
     return redirect(url_for("login"))
 
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
+    """Login route."""
     if request.method == "POST":
-        username = request.form.get("username", "").strip()
-        password = request.form.get("password", "")
-        user = find_user(username)
-
-        if not username or not password:
-            flash("Username and password are required.", "danger")
-            return render_template("login.html", show_register=False)
-
+        username = (request.form.get("username") or "").strip()
+        password = request.form.get("password") or ""
+        users = load_users()
+        user = users.get(username)
         if user and check_password_hash(user["password"], password):
-            session["username"] = user["username"]
-            session["role"] = user["role"]
-            flash(f"Welcome back, {user['username']}!", "success")
+            session["username"] = username
+            session["role"] = user.get("role", "user")
+            flash("Logged in successfully!")
             return redirect(url_for("dashboard"))
-
-        flash("Invalid username or password.", "danger")
-        return render_template("login.html", show_register=False)
-
-    return render_template("login.html", show_register=False)
+        flash("Invalid credentials. Try again.")
+    return render_template("login.html")
 
 
-@app.route("/register", methods=["GET", "POST"])
+@app.route("/register", methods=["POST"])
 def register():
-    if request.method == "POST":
-        username = request.form.get("username", "").strip()
-        password = request.form.get("password", "")
-        confirm_password = request.form.get("confirm_password", "")
-
-        if not username or not password or not confirm_password:
-            flash("All fields are required.", "danger")
-            return render_template("login.html", show_register=True)
-
-        if password != confirm_password:
-            flash("Passwords do not match.", "danger")
-            return render_template("login.html", show_register=True)
-
-        if find_user(username):
-            flash("That username already exists.", "danger")
-            return render_template("login.html", show_register=True)
-
-        append_user(username, generate_password_hash(password), "user")
-        flash("Account created successfully. Sign in to continue.", "success")
+    """Register new user."""
+    username = (request.form.get("username") or "").strip()
+    password = request.form.get("password") or ""
+    if not username or not password:
+        flash("Username and password required.")
         return redirect(url_for("login"))
-
-    return render_template("login.html", show_register=True)
+    users = load_users()
+    if username in users:
+        flash("Username already exists.")
+        return redirect(url_for("login"))
+    append_user(username, generate_password_hash(password), "user")
+    flash("Account created! Please log in.")
+    return redirect(url_for("login"))
 
 
 @app.route("/logout")
 def logout():
+    """Logout user."""
     session.clear()
-    flash("You have been signed out.", "info")
+    flash("Logged out successfully!")
     return redirect(url_for("login"))
 
 
-@app.route("/dashboard")
+@app.route("/dashboard", methods=["GET"])
+@login_required
 def dashboard():
-    auth_redirect = require_authentication()
-    if auth_redirect:
-        return auth_redirect
-
+    """Dashboard route."""
+    users = load_users()
+    contacts = load_contacts()
     username = session.get("username")
-    role = session.get("role")
-    contacts = filter_owner_contacts(load_contacts(), username, role)
+    role = session.get("role", "user")
 
-    owner_filter = request.args.get("owner_filter", "").strip()
+    # filters
+    search = (request.args.get("search") or "").strip()
+    selected_category = request.args.get("category") or "all"
+    owner_filter = request.args.get("owner_filter") or None
+    sort_key = request.args.get("sort") or "name"
+
+    def visible(c):
+        if role == "admin":
+            return True
+        return c.get("owner") == username
+
+    filtered = [c for c in contacts if visible(c)]
+    if search:
+        s = search.lower()
+        filtered = [c for c in filtered if s in (c.get("name","") or "").lower() or s in (c.get("phone","") or "") or s in (c.get("email","") or "")]
+    if selected_category and selected_category != "all":
+        filtered = [c for c in filtered if (c.get("category") or "").lower() == selected_category.lower()]
     if owner_filter:
-        contacts = [contact for contact in contacts if contact["owner"] == owner_filter]
+        filtered = [c for c in filtered if (c.get("owner") or "") == owner_filter]
 
-    selected_category = request.args.get("category", "all")
-    if selected_category != "all":
-        contacts = [contact for contact in contacts if contact["category"] == selected_category]
-
-    search_query = request.args.get("search", "").strip()
-    if search_query:
-        search_query_lower = search_query.lower()
-        contacts = [
-            contact
-            for contact in contacts
-            if search_query_lower in contact["name"].lower()
-            or search_query_lower in contact["phone"].lower()
-            or search_query_lower in contact["email"].lower()
-        ]
-
-    sort_key = request.args.get("sort", "name")
-    if sort_key == "date_newest":
-        contacts = sorted(contacts, key=lambda item: datetime.strptime(item["date_added"], "%Y-%m-%d %H:%M:%S"), reverse=True)
+    if sort_key == "name":
+        filtered.sort(key=lambda x: (x.get("name") or "").lower())
+    elif sort_key == "date_newest":
+        filtered.sort(key=lambda x: x.get("date_added") or "", reverse=True)
     elif sort_key == "date_oldest":
-        contacts = sorted(contacts, key=lambda item: datetime.strptime(item["date_added"], "%Y-%m-%d %H:%M:%S"))
-    else:
-        contacts = sorted(contacts, key=lambda item: item["name"].lower())
+        filtered.sort(key=lambda x: x.get("date_added") or "")
 
+    # edit request
+    edit_obj = None
     edit_id = request.args.get("edit_id")
-    edit_contact = None
     if edit_id:
-        candidate = find_contact(edit_id)
-        if candidate and can_manage_contact(candidate, username, role):
-            edit_contact = candidate
-        else:
-            flash("Unable to load that contact for editing.", "warning")
+        try:
+            eid = int(edit_id)
+            for c in contacts:
+                if c["id"] == eid:
+                    edit_obj = c
+                    break
+        except Exception:
+            edit_obj = None
 
-    users = [user["username"] for user in load_users()]
+    categories = sorted({(c.get("category") or "Others") for c in contacts})
 
     return render_template(
         "dashboard.html",
+        contacts=filtered,
+        users=list(users.keys()),
         username=username,
         role=role,
-        contacts=contacts,
-        categories=CATEGORIES,
-        users=users,
+        total_users=len(users),
+        total_contacts=len(contacts),
+        total_global_contacts=len(contacts),
+        personal_contacts=len([c for c in contacts if c.get("owner") == username]),
+        categories=categories,
+        search_query=search,
         selected_category=selected_category,
-        search_query=search_query,
         sort_key=sort_key,
         owner_filter=owner_filter,
-        edit_contact=edit_contact,
-        total_contacts=len(filter_owner_contacts(load_contacts(), username, role)),
-        total_users=len(users),
-        total_global_contacts=len(load_contacts()),
+        edit_contact=edit_obj,
     )
 
 
 @app.route("/add_contact", methods=["POST"])
+@login_required
 def add_contact():
-    auth_redirect = require_authentication()
-    if auth_redirect:
-        return auth_redirect
-
+    """Add new contact with duplicate check."""
     username = session.get("username")
-    role = session.get("role")
-    name = request.form.get("name", "").strip()
-    phone = request.form.get("phone", "").strip()
-    email = request.form.get("email", "").strip()
-    category = request.form.get("category", "Others").strip() or "Others"
-    owner = request.form.get("owner", username).strip() if role == "admin" else username
+    role = session.get("role", "user")
+    name = (request.form.get("name") or "").strip()
+    phone = (request.form.get("phone") or "").strip()
+    email = (request.form.get("email") or "").strip()
+    category = (request.form.get("category") or "Others").strip()
+    owner = username
+    if role == "admin":
+        owner = (request.form.get("record_owner") or username).strip() or username
 
     if not name or not phone:
-        flash("Name and phone are required.", "danger")
-        return redirect(url_for("dashboard"))
-
-    if role == "admin" and owner and not find_user(owner):
-        flash("The selected owner does not exist.", "danger")
+        flash("Name and phone are required.")
         return redirect(url_for("dashboard"))
 
     contacts = load_contacts()
     if is_duplicate_contact(contacts, name, phone, owner):
-        flash("Duplicate contact detected. Please verify Name and Phone.", "warning")
+        flash("⚠️ Duplicate contact detected! Contact not added.")
         return redirect(url_for("dashboard"))
 
-    new_contact = {
-        "id": get_next_contact_id(contacts),
+    cid = get_next_contact_id(contacts)
+    contacts.append({
+        "id": cid,
         "name": name,
         "phone": phone,
         "email": email,
-        "category": category if category in CATEGORIES else "Others",
-        "date_added": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "category": category,
+        "date_added": datetime.utcnow().strftime("%Y-%m-%d"),
         "owner": owner,
-    }
-    contacts.append(new_contact)
+    })
     save_contacts(contacts)
-    flash("Contact created successfully.", "success")
+    flash(f"✓ Contact '{name}' added successfully!")
     return redirect(url_for("dashboard"))
 
 
 @app.route("/edit_contact", methods=["POST"])
+@login_required
 def edit_contact():
-    auth_redirect = require_authentication()
-    if auth_redirect:
-        return auth_redirect
-
+    """Edit existing contact."""
     username = session.get("username")
-    role = session.get("role")
-    contact_id = request.form.get("contact_id")
-    name = request.form.get("name", "").strip()
-    phone = request.form.get("phone", "").strip()
-    email = request.form.get("email", "").strip()
-    category = request.form.get("category", "Others").strip() or "Others"
-    owner = request.form.get("owner", username).strip() if role == "admin" else None
-
-    if not contact_id or not name or not phone:
-        flash("Contact ID, name, and phone are required.", "danger")
+    role = session.get("role", "user")
+    try:
+        cid = int(request.form.get("contact_id"))
+    except Exception:
+        flash("Invalid contact ID.")
         return redirect(url_for("dashboard"))
 
+    name = (request.form.get("name") or "").strip()
+    phone = (request.form.get("phone") or "").strip()
+    email = (request.form.get("email") or "").strip()
+    category = (request.form.get("category") or "Others").strip()
     contacts = load_contacts()
-    contact = find_contact(contact_id)
-    if not contact or not can_manage_contact(contact, username, role):
-        flash("Unable to update this contact.", "danger")
-        return redirect(url_for("dashboard"))
-
-    target_owner = contact["owner"] if role != "admin" else owner or contact["owner"]
-    if role == "admin" and owner and not find_user(owner):
-        flash("The selected owner does not exist.", "danger")
-        return redirect(url_for("dashboard", edit_id=contact_id))
-
-    if is_duplicate_contact(contacts, name, phone, target_owner, exclude_id=contact_id):
-        flash("Duplicate contact detected for this owner. Please verify Name and Phone.", "warning")
-        return redirect(url_for("dashboard", edit_id=contact_id))
-
-    for item in contacts:
-        if item["id"] == str(contact_id):
-            item["name"] = name
-            item["phone"] = phone
-            item["email"] = email
-            item["category"] = category if category in CATEGORIES else "Others"
+    changed = False
+    for c in contacts:
+        if c.get("id") == cid:
+            if session.get("role") != "admin" and c.get("owner") != username:
+                flash("Permission denied.")
+                return redirect(url_for("dashboard"))
+            c["name"] = name
+            c["phone"] = phone
+            c["email"] = email
+            c["category"] = category
             if role == "admin":
-                item["owner"] = target_owner
+                c["owner"] = (request.form.get("record_owner") or c.get("owner"))
+            changed = True
             break
-
-    save_contacts(contacts)
-    flash("Contact updated successfully.", "success")
+    if changed:
+        save_contacts(contacts)
+        flash(f"✓ Contact updated successfully!")
+    else:
+        flash("Contact not found.")
     return redirect(url_for("dashboard"))
 
 
-@app.route("/delete_contact/<contact_id>", methods=["POST"])
-def delete_contact(contact_id):
-    auth_redirect = require_authentication()
-    if auth_redirect:
-        return auth_redirect
-
+@app.route("/delete_contact/<int:contact_id>", methods=["POST"])
+@login_required
+def delete_contact(contact_id: int):
+    """Delete contact."""
     username = session.get("username")
-    role = session.get("role")
-    contact = find_contact(contact_id)
-    if not contact or not can_manage_contact(contact, username, role):
-        flash("Unable to remove this contact.", "danger")
-        return redirect(url_for("dashboard"))
-
-    contacts = [item for item in load_contacts() if item["id"] != str(contact_id)]
-    save_contacts(contacts)
-    flash("Contact deleted successfully.", "success")
+    contacts = load_contacts()
+    new = []
+    deleted = False
+    for c in contacts:
+        if c.get("id") == contact_id:
+            if session.get("role") != "admin" and c.get("owner") != username:
+                flash("Permission denied.")
+                return redirect(url_for("dashboard"))
+            deleted = True
+            continue
+        new.append(c)
+    if deleted:
+        save_contacts(new)
+        flash("✓ Contact deleted successfully!")
+    else:
+        flash("Contact not found.")
     return redirect(url_for("dashboard"))
+
+
+def _contacts_visible_to_request(contacts: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Filter contacts visible to current user."""
+    role = session.get("role", "user")
+    username = session.get("username")
+    if role == "admin":
+        return contacts
+    return [c for c in contacts if c.get("owner") == username]
+
+
+@app.route("/export_txt")
+@login_required
+def export_txt():
+    """Export visible contacts as TXT file."""
+    contacts = load_contacts()
+    visible = _contacts_visible_to_request(contacts)
+    output_lines = []
+    for c in visible:
+        output_lines.append(
+            ",".join([str(c.get(k, "")) for k in ("id", "name", "phone", "email", "category", "date_added", "owner")])
+        )
+    txt = "\n".join(output_lines)
+    return Response(txt, mimetype="text/plain", headers={"Content-Disposition": "attachment; filename=contacts.txt"})
 
 
 @app.route("/export_registry")
+@login_required
 def export_registry():
-    username = session.get("username")
-    role = session.get("role")
-    if role != "admin":
-        flash("Registry export is only available to administrators.", "danger")
+    """Admin-only full registry export."""
+    if session.get("role") != "admin":
+        flash("Admin only.")
         return redirect(url_for("dashboard"))
+    return export_txt()
 
+
+@app.route("/import_txt", methods=["POST"])
+@login_required
+def import_txt():
+    """Import contacts from uploaded TXT file with duplicate checks."""
+    if "txt_file" not in request.files:
+        flash("No file provided.")
+        return redirect(url_for("dashboard"))
+    f = request.files["txt_file"]
+    if not f.filename:
+        flash("No file selected.")
+        return redirect(url_for("dashboard"))
+    try:
+        content = f.read().decode("utf-8", errors="ignore")
+    except Exception:
+        flash("Failed to read uploaded file.")
+        return redirect(url_for("dashboard"))
+    lines = [l for l in content.splitlines() if l.strip()]
     contacts = load_contacts()
-    output = StringIO()
-    writer = csv.writer(output)
-    writer.writerow(["ID", "Name", "Phone", "Email", "Category", "Date_Added", "Record_Owner"])
-    for contact in contacts:
-        writer.writerow(
-            [
-                contact["id"],
-                contact["name"],
-                contact["phone"],
-                contact["email"],
-                contact["category"],
-                contact["date_added"],
-                contact["owner"],
-            ]
-        )
-
-    response = Response(output.getvalue(), mimetype="text/csv")
-    response.headers[
-        "Content-Disposition"
-    ] = "attachment; filename=contacts_registry.csv"
-    return response
+    added = 0
+    skipped = 0
+    for line in lines:
+        try:
+            parts = list(csv.reader([line]))[0]
+            while len(parts) < 7:
+                parts.append("")
+            name = parts[1].strip() if len(parts) > 1 else ""
+            phone = parts[2].strip() if len(parts) > 2 else ""
+            owner = (parts[6].strip() if len(parts) > 6 else "") or session.get("username")
+            if not name or not phone:
+                continue
+            if is_duplicate_contact(contacts, name, phone, owner):
+                skipped += 1
+                continue
+            cid = get_next_contact_id(contacts)
+            contacts.append({
+                "id": cid,
+                "name": name,
+                "phone": phone,
+                "email": parts[3].strip() if len(parts) > 3 else "",
+                "category": (parts[4].strip() if len(parts) > 4 else "") or "Others",
+                "date_added": (parts[5].strip() if len(parts) > 5 else "") or datetime.utcnow().strftime("%Y-%m-%d"),
+                "owner": owner,
+            })
+            added += 1
+        except Exception:
+            continue
+    if added:
+        save_contacts(contacts)
+    msg = f"✓ Imported {added} contacts."
+    if skipped:
+        msg += f" ({skipped} duplicates skipped)"
+    flash(msg)
+    return redirect(url_for("dashboard"))
 
 
 if __name__ == "__main__":
     init_data_files()
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    app.run(host="127.0.0.1", port=5000, debug=False)
