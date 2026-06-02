@@ -1,14 +1,5 @@
-#!/usr/bin/env python3
-"""
-Production-ready Flask app for flat-file address book.
-
-Features:
-- Flat-file storage: users.txt, contacts.txt (CSV-ish)
-- Safe atomic writes and defensive parsing
-- Seeding of initial users and 15+ contacts for owners: admin, praise, zion
-- Routes: login, register, logout, dashboard, add/edit/delete, import/export
-"""
 from __future__ import annotations
+
 import csv
 import os
 import tempfile
@@ -37,6 +28,17 @@ app = Flask(__name__)
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.secret_key = os.environ.get("FLASK_SECRET_KEY") or "dev-secret-key-change-me"
+
+
+# ==================== CACHE BUSTER - PREVENT 404 CACHING ====================
+
+@app.after_request
+def add_header(response):
+    """Prevent browser caching of old 404 pages and all responses."""
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 
 def safe_read_lines(path: str) -> List[str]:
@@ -424,19 +426,26 @@ def _contacts_visible_to_request(contacts: List[Dict[str, Any]]) -> List[Dict[st
     return [c for c in contacts if c.get("owner") == username]
 
 
-@app.route("/export_txt")
+@app.route("/export_txt", methods=["GET", "POST"])
 @login_required
 def export_txt():
     """Export visible contacts as TXT file."""
-    contacts = load_contacts()
-    visible = _contacts_visible_to_request(contacts)
-    output_lines = []
-    for c in visible:
-        output_lines.append(
-            ",".join([str(c.get(k, "")) for k in ("id", "name", "phone", "email", "category", "date_added", "owner")])
-        )
-    txt = "\n".join(output_lines)
-    return Response(txt, mimetype="text/plain", headers={"Content-Disposition": "attachment; filename=contacts.txt"})
+    try:
+        contacts = load_contacts()
+        visible = _contacts_visible_to_request(contacts)
+        output_lines = []
+        for c in visible:
+            output_lines.append(
+                ",".join([str(c.get(k, "")) for k in ("id", "name", "phone", "email", "category", "date_added", "owner")])
+            )
+        txt = "\n".join(output_lines)
+        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        filename = f"contacts_backup_{timestamp}.txt"
+        return Response(txt, mimetype="text/plain", headers={"Content-Disposition": f"attachment; filename={filename}"})
+    except Exception as e:
+        flash(f"Export failed: {str(e)}", "danger")
+        print(f"Error exporting contacts: {e}")
+        return redirect(url_for("dashboard"))
 
 
 @app.route("/export_registry")

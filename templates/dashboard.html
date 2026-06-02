@@ -197,9 +197,7 @@
               <p class="panel-title">File Syncing</p>
               <h2 class="panel-heading">Import & Export</h2>
               <div style="display: grid; gap: 12px;">
-                <form method="post" action="{{ url_for('export_txt') }}">
-                  <button type="submit" class="button" style="width: 100%;"><i class="bi bi-download"></i> Download as TXT</button>
-                </form>
+                <a href="{{ url_for('export_txt') }}" class="button" style="width: 100%; text-align: center; justify-content: center;"><i class="bi bi-download"></i> Download as TXT</a>
               </div>
               <div class="import-section">
                 <p class="field-label">Upload CSV/TXT</p>
